@@ -5,6 +5,7 @@ in
 {
   wayland.windowManager.hyprland.settings = {
     exec-once = [
+      "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XCURSOR_THEME XCURSOR_SIZE GDK_SCALE HYPRCURSOR_THEME HYPRCURSOR_SIZE"
       "hypridle"
       "mako"
       "swayosd-server"

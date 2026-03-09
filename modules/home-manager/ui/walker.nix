@@ -179,7 +179,7 @@ in
   };
 
   systemd.user.services.walker = lib.mkIf config.programs.walker.runAsService {
-    Service.Environment = lib.mkForce [
+    Service.Environment = [
       "PATH=${elephantPkg}/bin:/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin:${config.home.homeDirectory}/.nix-profile/bin"
       "XDG_DATA_DIRS=${config.home.homeDirectory}/.nix-profile/share:/etc/profiles/per-user/${config.home.username}/share:/run/current-system/sw/share:${config.home.homeDirectory}/.local/share:/usr/local/share:/usr/share"
     ];
