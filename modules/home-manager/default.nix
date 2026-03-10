@@ -13,6 +13,7 @@
     ./apps/jetbrains.nix
     ./apps/neovim.nix
     ./apps/spotatui.nix
+    ./apps/spotify.nix
     ./apps/obsidian.nix
     ./apps/whatsapp.nix
     ./apps/mpv.nix
