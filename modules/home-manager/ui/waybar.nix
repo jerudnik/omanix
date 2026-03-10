@@ -7,6 +7,10 @@ let
   theme = config.omanix.activeTheme;
   cfg = config.omanix.waybar;
   monitorCfg = config.omanix.monitors;
+  scale = config.omanix.monitor.scale;
+  barHeight = if scale == "1" then 34 else 26;
+  fontSize = if scale == "1" then 15 else 13;
+  clockFontSize = if scale == "1" then 15 else 13;
 
   buildFormatIcons =
     monitors:
@@ -149,7 +153,7 @@ in
         mainBar = {
           layer = "top";
           position = "top";
-          height = 26;
+          height = barHeight;
           spacing = 0;
 
           inherit (cfg) modules-left;
@@ -275,7 +279,7 @@ in
           border-radius: 0;
           min-height: 0;
           font-family: 'omanix', '${config.omanix.font}'; 
-          font-size: 13px;
+          font-size: ${toString fontSize}px;
         }
 
         .modules-left { margin-left: 8px; }
