@@ -39,6 +39,19 @@ in
       '';
     };
 
+    menu = {
+      width = lib.mkOption {
+        type = lib.types.int;
+        default = if cfg.monitor.scale == "1" then 369 else 295;
+        description = "Menu width in pixels.";
+      };
+      maxHeight = lib.mkOption {
+        type = lib.types.int;
+        default = if cfg.monitor.scale == "1" then 788 else 630;
+        description = "Menu max height in pixels.";
+      };
+    };
+
     wallpaperIndex = mkOption {
       type = types.int;
       default = if hasOsConfig then osConfig.omanix.wallpaperIndex else 0;

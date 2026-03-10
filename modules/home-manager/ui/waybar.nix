@@ -7,10 +7,6 @@ let
   theme = config.omanix.activeTheme;
   cfg = config.omanix.waybar;
   monitorCfg = config.omanix.monitors;
-  scale = config.omanix.monitor.scale;
-  barHeight = if scale == "1" then 34 else 26;
-  fontSize = if scale == "1" then 15 else 13;
-  clockFontSize = if scale == "1" then 15 else 13;
 
   buildFormatIcons =
     monitors:
@@ -80,6 +76,25 @@ let
 in
 {
   options.omanix.waybar = {
+
+    barHeight = lib.mkOption {
+      type = lib.types.int;
+      default = if config.omanix.monitor.scale == "1" then 34 else 26;
+      description = "Waybar height in pixels.";
+    };
+
+    fontSize = lib.mkOption {
+      type = lib.types.int;
+      default = if config.omanix.monitor.scale == "1" then 15 else 13;
+      description = "Waybar font size in pixels.";
+    };
+
+    clockFormat = lib.mkOption {
+      type = lib.types.str;
+      default = "{:%A, %d %B %H:%M}";
+      description = "Clock format string for waybar (strftime specifiers).";
+    };
+
     modules-left = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ "hyprland/workspaces" ];
@@ -153,7 +168,7 @@ in
         mainBar = {
           layer = "top";
           position = "top";
-          height = barHeight;
+          height = cfg.barHeight;
           spacing = 0;
 
           inherit (cfg) modules-left;
@@ -194,7 +209,7 @@ in
             signal = 8;
           };
           clock = {
-            format = "{:%A, %d %B %H:%M}";
+            format = cfg.clockFormat;
             tooltip-format = "<tt><small>{calendar}</small></tt>";
           };
 
@@ -278,7 +293,7 @@ in
           border-radius: 0;
           min-height: 0;
           font-family: 'omanix', '${config.omanix.font}'; 
-          font-size: ${toString fontSize}px;
+          font-size: ${toString cfg.fontSize}px;
         }
 
         .modules-left { margin-left: 8px; }

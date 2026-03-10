@@ -101,15 +101,11 @@ in
     width = lib.mkOption {
       type = lib.types.int;
       default = walkerWidth;
-      readOnly = true;
-      internal = true;
       description = "Resolved walker window width.";
     };
     height = lib.mkOption {
       type = lib.types.int;
       default = walkerHeight;
-      readOnly = true;
-      internal = true;
       description = "Resolved walker window height.";
     };
   };
