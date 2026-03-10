@@ -8,12 +8,15 @@ let
   theme = config.omanix.activeTheme;
   inherit (omanixLib) colors;
   cfg = config.omanix;
+
+  # If scale is a number > 1, use GDK_SCALE=2; otherwise GDK_SCALE=1
+  scaleNum = let
+    parsed = builtins.tryEval (builtins.fromJSON cfg.monitor.scale);
+  in if parsed.success then parsed.value else 1.0;
+  gdkScale = if scaleNum > 1 then "2" else "1";
 in
 {
   options.omanix.hyprland.extraSettings = lib.mkOption {
-    # Note: extraWindowRules, extraLayerRules, extraBindings, etc.
-    # are defined in rules.nix and bindings.nix respectively.
-    # This option covers everything else (general, dwindle, decoration, etc.)
     type = lib.types.attrs;
     default = { };
     description = ''
@@ -39,7 +42,7 @@ in
 
       settings = lib.recursiveUpdate {
         env = [
-          "GDK_SCALE,2"
+          "GDK_SCALE,${gdkScale}"
         ];
 
         xwayland = {
