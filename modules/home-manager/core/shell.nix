@@ -62,7 +62,7 @@
         lt = "eza --tree --level=2 --long --icons --git";
         ll = "eza -l --icons=auto";
         la = "eza -la --icons=auto";
-        pbcopy = "wl-copy";
+        pbcopy = "wl-copy --type text/plain";
         pbpaste = "wl-paste";
         cat = "bat -pp";
 
