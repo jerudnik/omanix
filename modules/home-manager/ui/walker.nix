@@ -7,7 +7,7 @@
 }:
 let
   theme = config.omanix.activeTheme;
-  elephantPkg = inputs.elephant.packages.${pkgs.system}.default;
+  elephantPkg = inputs.elephant.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   scale = config.omanix.monitor.scale;
   walkerWidth = if scale == "1" then 805 else 644;

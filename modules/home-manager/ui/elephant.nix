@@ -7,7 +7,7 @@
 }:
 
 let
-  elephantPkg = inputs.elephant.packages.${pkgs.system}.default;
+  elephantPkg = inputs.elephant.packages.${pkgs.stdenv.hostPlatform.system}.default;
   availableThemes = builtins.attrNames omanixLib.themes;
 
   nixosDataDirs = lib.concatStringsSep ":" [

@@ -39,7 +39,7 @@ let
 
   omanixScripts = pkgs.omanix-scripts.override {
     browserFallback = defaultBrowser;
-    walker = inputs.walker.packages.${pkgs.system}.default;
+    walker = inputs.walker.packages.${pkgs.stdenv.hostPlatform.system}.default;
     inherit
       themesJson
       docStylePreview
