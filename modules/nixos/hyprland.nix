@@ -1,13 +1,26 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 let
   cfg = config.omanix;
 in
 {
   config = lib.mkIf cfg.enable {
-    # Disable UWSM-managed Hyprland session — it causes a kernel DRM master
-    # deadlock when SDDM selects it (Weston holds DRM master while uwsm's
-    # async systemd startup races to acquire it, freezing the entire system
-    # with no TTY escape possible).
+    # withUWSM = false prevents programs.uwsm.enable from being set,
+    # but hyprland-uwsm.desktop is baked into the hyprland package itself
+    # (upstream ships it in systemd/hyprland-uwsm.desktop via CMake).
+    # We replace the session package with one that only exposes hyprland.desktop.
+    # Selecting hyprland-uwsm.desktop causes a kernel DRM master deadlock:
+    # Weston holds DRM master while uwsm's async systemd startup races to
+    # acquire it, freezing the system with no TTY escape possible.
     programs.hyprland.withUWSM = false;
+
+    services.displayManager.sessionPackages = lib.mkForce [
+      (pkgs.runCommand "hyprland-sessions" {
+        passthru.providedSessions = [ "hyprland" ];
+      } ''
+        mkdir -p $out/share/wayland-sessions
+        cp ${config.programs.hyprland.package}/share/wayland-sessions/hyprland.desktop \
+           $out/share/wayland-sessions/
+      '')
+    ];
   };
 }
