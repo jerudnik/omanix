@@ -8,7 +8,7 @@ let
 in
 {
   options.omanix.apps.tmux = {
-    enable = lib.mkEnableOption "tmux with AI dev layouts";
+    enable = lib.mkEnableOption "tmux with AI dev layouts" // { default = true; };
 
     aiCommand = lib.mkOption {
       type = lib.types.str;
@@ -213,7 +213,7 @@ in
       '';
     };
 
-    wayland.windowManager.hyprland.settings.bindd = lib.mkIf cfg.hyprlandBinding [
+    omanix.hyprland.extraBindings = lib.mkIf cfg.hyprlandBinding [
       "$mainMod ALT, RETURN, Tmux, exec, ghostty --working-directory=\"$(omanix-cmd-terminal-cwd)\" -e bash -c 'tmux attach || tmux new -s Work'"
     ];
   };
