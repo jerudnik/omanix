@@ -1,4 +1,4 @@
-Omanix is a NixOS port of [Omarchy](https://omarchy.org) by DHH. It brings the same curated, keyboard-driven Hyprland experience to NixOS while embracing the Nix philosophy: everything is declarative, reproducible, and configured at build time.
+Omanix is a NixOS port of [Omarchy](https://omarchy.org). It brings the same curated, keyboard-driven Hyprland experience to NixOS while embracing the Nix philosophy: everything is declarative, reproducible, and configured at build time.
 
 ## What You Get
 
