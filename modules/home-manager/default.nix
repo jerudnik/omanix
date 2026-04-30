@@ -19,6 +19,7 @@
     ./apps/mpv.nix
     ./apps/satty.nix
     ./apps/btop.nix
+    ./apps/tmux.nix
     ./apps/gh.nix
     ./desktop/hyprland/autostart.nix
     ./desktop/hyprland/envs.nix
