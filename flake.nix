@@ -63,7 +63,7 @@
         spotatui = prev.callPackage inputs.spotatui { };
         omanix-screensaver = final.callPackage ./pkgs/omanix-screensaver { };
         omanix-scripts = final.callPackage ./pkgs/omanix-scripts { };
-        wlctl = inputs.wlctl.packages.${prev.system}.default;
+        wlctl = inputs.wlctl.packages.${prev.stdenv.hostPlatform.system}.default;
 
         yt-dlp = prev.yt-dlp.overrideAttrs (oldAttrs: {
           src = inputs.yt-dlp-src;
