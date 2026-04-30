@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 let
   theme = config.omanix.activeTheme;
   inherit (theme) colors;
@@ -6,7 +6,13 @@ let
   fontSize = if scale == "1" then 13 else 10;
 in
 {
-  programs.ghostty = {
+  options.omanix.terminal.mouseScrollMultiplier = lib.mkOption {
+    type = lib.types.float;
+    default = 5.0;
+    description = "Ghostty mouse scroll multiplier. Higher values scroll more lines per tick.";
+  };
+
+  config.programs.ghostty = {
     enable = true;
     settings = {
       command = "${pkgs.zsh}/bin/zsh";
@@ -20,7 +26,7 @@ in
 
       cursor-style = "block";
       cursor-style-blink = false;
-      mouse-scroll-multiplier = 1.0;
+      mouse-scroll-multiplier = config.omanix.terminal.mouseScrollMultiplier;
       font-family = config.omanix.font;
       font-style = "Regular";
       font-size = fontSize;
