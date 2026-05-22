@@ -1,6 +1,7 @@
 { config, lib, ... }:
 let
   cfg = config.omanix;
+  mkLua = lib.generators.mkLuaInline;
 
   workspaceRules = lib.flatten (
     lib.imap0 (
@@ -10,7 +11,15 @@ let
       in
       lib.imap1 (
         wsIdx: _:
-        "${toString (base + wsIdx)}, monitor:${mon.name}${if wsIdx == 1 then ", default:true" else ""}"
+        {
+          _args = [
+            (mkLua ''{
+              workspace = "${toString (base + wsIdx)}",
+              monitor = "${mon.name}"${if wsIdx == 1 then '',
+              default = true'' else ""},
+            }'')
+          ];
+        }
       ) (lib.range 1 mon.workspaceCount)
     ) cfg.monitors
   );
@@ -19,14 +28,23 @@ let
     mon: mon.resolution != null || mon.refreshRate != null
   ) cfg.monitors;
 
-  mkMonitorLine =
+  mkMonitorSpec =
     mon:
     let
       res = if mon.resolution != null then mon.resolution else "highres";
       rate = if mon.refreshRate != null then "@${toString mon.refreshRate}" else "";
       scale = toString cfg.monitor.scale;
     in
-    "${mon.name}, ${res}${rate}, auto, ${scale}";
+    {
+      _args = [
+        (mkLua ''{
+          output = "${mon.name}",
+          mode = "${res}${rate}",
+          position = "auto",
+          scale = "${scale}",
+        }'')
+      ];
+    };
 in
 {
   options.omanix.monitors = lib.mkOption {
@@ -78,9 +96,9 @@ in
 
   config = lib.mkIf (cfg.monitors != [ ]) {
     wayland.windowManager.hyprland.settings = lib.mkMerge [
-      { workspace = workspaceRules; }
+      { workspace_rule = workspaceRules; }
       (lib.mkIf (explicitMonitorLines != [ ]) {
-        monitor = map mkMonitorLine explicitMonitorLines;
+        monitor = map mkMonitorSpec explicitMonitorLines;
       })
     ];
   };

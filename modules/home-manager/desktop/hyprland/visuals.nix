@@ -9,13 +9,14 @@ let
   inherit (omanixLib) colors;
   cfg = config.omanix;
 
-  # If scale is a number > 1, use GDK_SCALE=2; otherwise GDK_SCALE=1
   scaleNum =
     let
-      parsed = builtins.tryEval (builtins.fromJSON cfg.monitor.scale);
+      isNumeric = builtins.match "[0-9.]+" cfg.monitor.scale != null;
     in
-    if parsed.success then parsed.value else 1.0;
+    if isNumeric then builtins.fromJSON cfg.monitor.scale else 1.0;
   gdkScale = if scaleNum > 1 then "2" else "1";
+
+  mkLua = lib.generators.mkLuaInline;
 in
 {
   options.omanix.hyprland.extraSettings = lib.mkOption {
@@ -28,12 +29,10 @@ in
 
       Example:
         omanix.hyprland.extraSettings = {
-          layout.single_window_aspect_ratio = "1 1";
-          general.allow_tearing = true;
-          decoration.rounding = 10;
-          windowrule = [
-            "opacity 1 1, match:class ^(my-app)$"
-          ];
+          config = {
+            general.allow_tearing = true;
+            decoration.rounding = 10;
+          };
         };
     '';
   };
@@ -41,95 +40,113 @@ in
   config = {
     wayland.windowManager.hyprland = {
       enable = true;
+      configType = "lua";
 
       settings = lib.recursiveUpdate {
         env = [
-          "GDK_SCALE,${gdkScale}"
+          { _args = [ "GDK_SCALE" gdkScale ]; }
         ];
 
-        xwayland = {
-          force_zero_scaling = true;
-        };
+        monitor = [
+          {
+            _args = [
+              (mkLua ''{
+                output = "",
+                mode = "highres",
+                position = "auto",
+                scale = "${toString cfg.monitor.scale}",
+              }'')
+            ];
+          }
+        ];
 
-        monitor = lib.mkDefault ",highres,auto,${toString cfg.monitor.scale}";
-        general = {
-          gaps_in = cfg.hyprland.gaps.inner;
-          gaps_out = cfg.hyprland.gaps.outer;
-          border_size = cfg.hyprland.border.size;
+        config = {
+          general = {
+            gaps_in = cfg.hyprland.gaps.inner;
+            gaps_out = cfg.hyprland.gaps.outer;
+            border_size = cfg.hyprland.border.size;
 
-          "col.active_border" = "rgb(${colors.stripHash theme.colors.accent})";
-          "col.inactive_border" = "rgb(${colors.stripHash theme.colors.color8})";
+            col = {
+              active_border = "rgb(${colors.stripHash theme.colors.accent})";
+              inactive_border = "rgb(${colors.stripHash theme.colors.color8})";
+            };
 
-          layout = "dwindle";
-          resize_on_border = false;
-          allow_tearing = false;
-        };
-
-        decoration = {
-          inherit (cfg.hyprland) rounding;
-
-          shadow = {
-            inherit (cfg.hyprland.shadow) enabled;
-            inherit (cfg.hyprland.shadow) range;
-            render_power = 3;
-            color = "rgba(1a1a1aee)";
+            layout = "dwindle";
+            resize_on_border = false;
+            allow_tearing = false;
           };
 
-          blur = {
-            inherit (cfg.hyprland.blur) enabled;
-            inherit (cfg.hyprland.blur) size;
-            inherit (cfg.hyprland.blur) passes;
-            special = true;
-            brightness = 0.6;
-            contrast = 0.75;
+          decoration = {
+            inherit (cfg.hyprland) rounding;
+
+            shadow = {
+              inherit (cfg.hyprland.shadow) enabled;
+              inherit (cfg.hyprland.shadow) range;
+              render_power = 3;
+              color = "0xee1a1a1a";
+            };
+
+            blur = {
+              inherit (cfg.hyprland.blur) enabled;
+              inherit (cfg.hyprland.blur) size;
+              inherit (cfg.hyprland.blur) passes;
+              special = true;
+              brightness = 0.6;
+              contrast = 0.75;
+            };
+          };
+
+          animations = {
+            inherit (cfg.hyprland.animations) enabled;
+          };
+
+          xwayland = {
+            force_zero_scaling = true;
+          };
+
+          dwindle = {
+            preserve_split = true;
+            force_split = 2;
+          };
+
+          master = {
+            new_status = "master";
+          };
+
+          cursor = {
+            hide_on_key_press = true;
+          };
+
+          misc = {
+            disable_hyprland_logo = true;
+            disable_splash_rendering = true;
           };
         };
 
-        animations = {
-          inherit (cfg.hyprland.animations) enabled;
-          bezier = [
-            "easeOutQuint,0.23,1,0.32,1"
-            "easeInOutCubic,0.65,0.05,0.36,1"
-            "linear,0,0,1,1"
-            "almostLinear,0.5,0.5,0.75,1.0"
-            "quick,0.15,0,0.1,1"
-          ];
-          animation = [
-            "global, 1, 10, default"
-            "border, 1, 5.39, easeOutQuint"
-            "windows, 1, 4.79, easeOutQuint"
-            "windowsIn, 1, 4.1, easeOutQuint, popin 87%"
-            "windowsOut, 1, 1.49, linear, popin 87%"
-            "fadeIn, 1, 1.73, almostLinear"
-            "fadeOut, 1, 1.46, almostLinear"
-            "fade, 1, 3.03, quick"
-            "layers, 1, 3.81, easeOutQuint"
-            "layersIn, 1, 4, easeOutQuint, fade"
-            "layersOut, 1, 1.5, linear, fade"
-            "fadeLayersIn, 1, 1.79, almostLinear"
-            "fadeLayersOut, 1, 1.39, almostLinear"
-            "workspaces, 0, 0, ease"
-          ];
-        };
+        curve = [
+          { _args = [ "easeOutQuint" (mkLua ''{ type = "bezier", points = { {0.23, 1}, {0.32, 1} } }'') ]; }
+          { _args = [ "easeInOutCubic" (mkLua ''{ type = "bezier", points = { {0.65, 0.05}, {0.36, 1} } }'') ]; }
+          { _args = [ "linear" (mkLua ''{ type = "bezier", points = { {0, 0}, {1, 1} } }'') ]; }
+          { _args = [ "almostLinear" (mkLua ''{ type = "bezier", points = { {0.5, 0.5}, {0.75, 1} } }'') ]; }
+          { _args = [ "quick" (mkLua ''{ type = "bezier", points = { {0.15, 0}, {0.1, 1} } }'') ]; }
+        ];
 
-        dwindle = {
-          pseudotile = true;
-          preserve_split = true;
-          force_split = 2;
-        };
-
-        master = {
-          new_status = "master";
-        };
-
-        cursor = {
-          hide_on_key_press = true;
-        };
-
-        misc = {
-          disable_hyprland_logo = true;
-          disable_splash_rendering = true;
-        };
+        animation = [
+          { _args = [ (mkLua ''{ leaf = "global", enabled = true, speed = 10, bezier = "default" }'') ]; }
+          { _args = [ (mkLua ''{ leaf = "border", enabled = true, speed = 5.39, bezier = "easeOutQuint" }'') ]; }
+          { _args = [ (mkLua ''{ leaf = "windows", enabled = true, speed = 4.79, bezier = "easeOutQuint" }'') ]; }
+          { _args = [ (mkLua ''{ leaf = "windowsIn", enabled = true, speed = 4.1, bezier = "easeOutQuint", style = "popin 87%" }'') ]; }
+          { _args = [ (mkLua ''{ leaf = "windowsOut", enabled = true, speed = 1.49, bezier = "linear", style = "popin 87%" }'') ]; }
+          { _args = [ (mkLua ''{ leaf = "fadeIn", enabled = true, speed = 1.73, bezier = "almostLinear" }'') ]; }
+          { _args = [ (mkLua ''{ leaf = "fadeOut", enabled = true, speed = 1.46, bezier = "almostLinear" }'') ]; }
+          { _args = [ (mkLua ''{ leaf = "fade", enabled = true, speed = 3.03, bezier = "quick" }'') ]; }
+          { _args = [ (mkLua ''{ leaf = "layers", enabled = true, speed = 3.81, bezier = "easeOutQuint" }'') ]; }
+          { _args = [ (mkLua ''{ leaf = "layersIn", enabled = true, speed = 4, bezier = "easeOutQuint", style = "fade" }'') ]; }
+          { _args = [ (mkLua ''{ leaf = "layersOut", enabled = true, speed = 1.5, bezier = "linear", style = "fade" }'') ]; }
+          { _args = [ (mkLua ''{ leaf = "fadeLayersIn", enabled = true, speed = 1.79, bezier = "almostLinear" }'') ]; }
+          { _args = [ (mkLua ''{ leaf = "fadeLayersOut", enabled = true, speed = 1.39, bezier = "almostLinear" }'') ]; }
+          { _args = [ (mkLua ''{ leaf = "workspaces", enabled = false }'') ]; }
+        ];
       } cfg.hyprland.extraSettings;
     };
   };

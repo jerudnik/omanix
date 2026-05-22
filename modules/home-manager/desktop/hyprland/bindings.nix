@@ -2,6 +2,25 @@
 let
   cfg = config.omanix;
   osdClient = ''swayosd-client --monitor "$(hyprctl monitors -j | jq -r '.[] | select(.focused == true).name')"'';
+
+  mkLua = lib.generators.mkLuaInline;
+
+  mkBind = key: dispatcher: opts:
+    { _args = [ (mkLua key) (mkLua dispatcher) ] ++ lib.optional (opts != { }) opts; };
+
+  mkExec = key: cmd: desc:
+    mkBind key "hl.dsp.exec_cmd([[${cmd}]])" { description = desc; };
+
+  mkExecLocked = key: cmd: desc:
+    mkBind key "hl.dsp.exec_cmd([[${cmd}]])" { description = desc; locked = true; };
+
+  mkExecRepeatLocked = key: cmd: desc:
+    mkBind key "hl.dsp.exec_cmd([[${cmd}]])" { description = desc; locked = true; repeating = true; };
+
+  terminal = ''ghostty --working-directory=\"$(omanix-cmd-terminal-cwd)\"'';
+  fileManager = ''nautilus --new-window \"$(omanix-cmd-terminal-cwd)\"'';
+  browser = "${cfg.browser.package}/bin/${cfg.browser.bin}";
+  browserPrivate = "${cfg.browser.package}/bin/${cfg.browser.bin} ${cfg.browser.privateFlag}";
 in
 {
   options.omanix = {
@@ -27,309 +46,263 @@ in
 
   options.omanix.hyprland = {
     extraBindings = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
+      type = lib.types.listOf (lib.types.either lib.types.str lib.types.attrs);
       default = [ ];
-      description = ''
-        Extra key bindings (bindd format) appended to the Omanix defaults.
-
-        Example:
-          omanix.hyprland.extraBindings = [
-            "$mainMod SHIFT, G, Open GIMP, exec, gimp"
-            "$mainMod, Z, Zoom In, exec, my-zoom-script"
-          ];
-      '';
+      description = "Extra key bindings appended to the Omanix defaults. Use attrset with _args for Lua bind format.";
     };
 
     extraBinds = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
+      type = lib.types.listOf (lib.types.either lib.types.str lib.types.attrs);
       default = [ ];
-      description = ''
-        Extra simple binds (bind format, no description) appended to the defaults.
-
-        Example:
-          omanix.hyprland.extraBinds = [
-            "$mainMod, G, exec, gimp"
-          ];
-      '';
+      description = "Extra simple binds appended to the defaults.";
     };
 
     extraMouseBindings = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
+      type = lib.types.listOf (lib.types.either lib.types.str lib.types.attrs);
       default = [ ];
-      description = ''
-        Extra mouse bindings appended to the Omanix defaults.
-
-        Example:
-          omanix.hyprland.extraMouseBindings = [
-            "$mainMod, mouse:274, togglefloating"
-          ];
-      '';
+      description = "Extra mouse bindings appended to the Omanix defaults.";
     };
 
     extraMediaBindings = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
+      type = lib.types.listOf (lib.types.either lib.types.str lib.types.attrs);
       default = [ ];
-      description = ''
-        Extra repeat+description bindings (binddel format) appended to defaults.
-      '';
+      description = "Extra media bindings appended to defaults.";
     };
 
     extraLockedBindings = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
+      type = lib.types.listOf (lib.types.either lib.types.str lib.types.attrs);
       default = [ ];
-      description = ''
-        Extra locked+description bindings (binddl format) appended to defaults.
-      '';
+      description = "Extra locked bindings appended to defaults.";
     };
   };
 
   config = {
     wayland.windowManager.hyprland.settings = {
-      "$mainMod" = "SUPER";
+      mod = { _var = "SUPER"; };
 
-      # ═══════════════════════════════════════════════════════════════════
-      # APP LAUNCHERS
-      # ═══════════════════════════════════════════════════════════════════
-      "$terminal" = "ghostty --working-directory=\"$(omanix-cmd-terminal-cwd)\"";
-      "$fileManager" = "nautilus --new-window \"$(omanix-cmd-terminal-cwd)\"";
-      "$browser" = "${cfg.browser.package}/bin/${cfg.browser.bin}";
-      "$browserPrivate" = "${cfg.browser.package}/bin/${cfg.browser.bin} ${cfg.browser.privateFlag}";
+      bind =
+        [
+          # ─────────────────────────────────────────────────────────────────
+          # App Launchers
+          # ─────────────────────────────────────────────────────────────────
+          (mkExec ''mod .. " + RETURN"'' terminal "Open Terminal")
+          (mkExec ''mod .. " + SHIFT + F"'' fileManager "Open File Manager")
+          (mkExec ''mod .. " + SHIFT + B"'' browser "Open Browser")
+          (mkExec ''mod .. " + SHIFT + ALT + B"'' browserPrivate "Open Private Browser")
+          (mkExec ''mod .. " + SHIFT + N"'' "${terminal} -e nvim" "Open Neovim")
+          (mkExec ''mod .. " + SHIFT + D"'' "${terminal} -e lazydocker" "Open Lazydocker")
+          (mkExec ''mod .. " + SHIFT + O"'' "obsidian -disable-gpu" "Open Obsidian")
 
-      # ═══════════════════════════════════════════════════════════════════
-      # BINDINGS WITH DESCRIPTIONS (bindd)
-      # Max 30 char descriptions for clean menu display
-      # ═══════════════════════════════════════════════════════════════════
-      bindd = [
-        # ─────────────────────────────────────────────────────────────────
-        # App Launchers
-        # ─────────────────────────────────────────────────────────────────
-        "$mainMod, RETURN, Open Terminal, exec, $terminal"
-        "$mainMod SHIFT, F, Open File Manager, exec, $fileManager"
-        "$mainMod SHIFT, B, Open Browser, exec, $browser"
-        "$mainMod SHIFT ALT, B, Open Private Browser, exec, $browserPrivate"
-        "$mainMod SHIFT, N, Open Neovim, exec, $terminal -e nvim"
-        "$mainMod SHIFT, D, Open Lazydocker, exec, $terminal -e lazydocker"
-        "$mainMod SHIFT, O, Open Obsidian, exec, obsidian -disable-gpu"
+          # ─────────────────────────────────────────────────────────────────
+          # Clipboard
+          # ─────────────────────────────────────────────────────────────────
+          (mkBind ''mod .. " + C"'' ''hl.dsp.send_shortcut({ mods = "CTRL", key = "Insert" })'' { description = "Copy"; })
+          (mkBind ''mod .. " + V"'' ''hl.dsp.send_shortcut({ mods = "SHIFT", key = "Insert" })'' { description = "Paste"; })
+          (mkBind ''mod .. " + X"'' ''hl.dsp.send_shortcut({ mods = "CTRL", key = "X" })'' { description = "Cut"; })
+          (mkExec ''mod .. " + CTRL + V"'' "omanix-launch-walker -m clipboard" "Clipboard History")
+
+          # ─────────────────────────────────────────────────────────────────
+          # Window Management
+          # ─────────────────────────────────────────────────────────────────
+          (mkBind ''mod .. " + W"'' "hl.dsp.window.close()" { description = "Close Window"; })
+          (mkExec ''"CTRL + ALT + DELETE"'' "omanix-hyprland-window-close-all" "Close All Windows")
+
+          (mkBind ''mod .. " + J"'' ''hl.dsp.layout("togglesplit")'' { description = "Toggle Split Direction"; })
+          (mkBind ''mod .. " + P"'' "hl.dsp.window.pseudo()" { description = "Toggle Pseudo-tile"; })
+          (mkBind ''mod .. " + T"'' ''hl.dsp.window.float({ action = "toggle" })'' { description = "Toggle Floating"; })
+          (mkBind ''mod .. " + F"'' "hl.dsp.window.fullscreen(0)" { description = "Fullscreen"; })
+          (mkBind ''mod .. " + CTRL + F"'' ''hl.dsp.window.fullscreen_state({ internal = 0, client = 2 })'' { description = "Fullscreen (Keep Bar)"; })
+          (mkBind ''mod .. " + ALT + F"'' "hl.dsp.window.fullscreen(1)" { description = "Maximize Window"; })
+          (mkExec ''mod .. " + code:32"'' "omanix-hyprland-window-pop" "Pop Window Out")
+
+          # Move focus
+          (mkBind ''mod .. " + LEFT"'' ''hl.dsp.focus({ direction = "left" })'' { description = "Focus Left"; })
+          (mkBind ''mod .. " + RIGHT"'' ''hl.dsp.focus({ direction = "right" })'' { description = "Focus Right"; })
+          (mkBind ''mod .. " + UP"'' ''hl.dsp.focus({ direction = "up" })'' { description = "Focus Up"; })
+          (mkBind ''mod .. " + DOWN"'' ''hl.dsp.focus({ direction = "down" })'' { description = "Focus Down"; })
+
+          # ─────────────────────────────────────────────────────────────────
+          # Workspace Management (Monitor-Aware)
+          # ─────────────────────────────────────────────────────────────────
+          (mkExec ''mod .. " + code:10"'' "omanix-workspace 1" "Workspace 1")
+          (mkExec ''mod .. " + code:11"'' "omanix-workspace 2" "Workspace 2")
+          (mkExec ''mod .. " + code:12"'' "omanix-workspace 3" "Workspace 3")
+          (mkExec ''mod .. " + code:13"'' "omanix-workspace 4" "Workspace 4")
+          (mkExec ''mod .. " + code:14"'' "omanix-workspace 5" "Workspace 5")
+
+          (mkExec ''mod .. " + SHIFT + code:10"'' "omanix-workspace 1 move" "Move to Workspace 1")
+          (mkExec ''mod .. " + SHIFT + code:11"'' "omanix-workspace 2 move" "Move to Workspace 2")
+          (mkExec ''mod .. " + SHIFT + code:12"'' "omanix-workspace 3 move" "Move to Workspace 3")
+          (mkExec ''mod .. " + SHIFT + code:13"'' "omanix-workspace 4 move" "Move to Workspace 4")
+          (mkExec ''mod .. " + SHIFT + code:14"'' "omanix-workspace 5 move" "Move to Workspace 5")
+
+          (mkExec ''mod .. " + SHIFT + ALT + code:10"'' "omanix-workspace 1 movesilent" "Send to Workspace 1")
+          (mkExec ''mod .. " + SHIFT + ALT + code:11"'' "omanix-workspace 2 movesilent" "Send to Workspace 2")
+          (mkExec ''mod .. " + SHIFT + ALT + code:12"'' "omanix-workspace 3 movesilent" "Send to Workspace 3")
+          (mkExec ''mod .. " + SHIFT + ALT + code:13"'' "omanix-workspace 4 movesilent" "Send to Workspace 4")
+          (mkExec ''mod .. " + SHIFT + ALT + code:14"'' "omanix-workspace 5 movesilent" "Send to Workspace 5")
+
+          # ─────────────────────────────────────────────────────────────────
+          # Multi-Monitor Management
+          # ─────────────────────────────────────────────────────────────────
+          (mkBind ''mod .. " + bracketright"'' ''hl.dsp.focus({ monitor = "+1" })'' { description = "Focus Next Monitor"; })
+          (mkBind ''mod .. " + bracketleft"'' ''hl.dsp.focus({ monitor = "-1" })'' { description = "Focus Prev Monitor"; })
+          (mkBind ''mod .. " + SHIFT + bracketright"'' ''hl.dsp.window.move({ monitor = "+1" })'' { description = "Window to Next Monitor"; })
+          (mkBind ''mod .. " + SHIFT + bracketleft"'' ''hl.dsp.window.move({ monitor = "-1" })'' { description = "Window to Prev Monitor"; })
+
+          # ─────────────────────────────────────────────────────────────────
+          # Workspace Navigation
+          # ─────────────────────────────────────────────────────────────────
+          (mkBind ''mod .. " + TAB"'' ''hl.dsp.focus({ workspace = "e+1" })'' { description = "Next Workspace"; })
+          (mkBind ''mod .. " + SHIFT + TAB"'' ''hl.dsp.focus({ workspace = "e-1" })'' { description = "Previous Workspace"; })
+          (mkBind ''mod .. " + CTRL + TAB"'' ''hl.dsp.focus({ workspace = "previous" })'' { description = "Last Workspace"; })
+
+          # Swap windows
+          (mkBind ''mod .. " + SHIFT + LEFT"'' ''hl.dsp.window.swap({ direction = "left" })'' { description = "Swap Window Left"; })
+          (mkBind ''mod .. " + SHIFT + RIGHT"'' ''hl.dsp.window.swap({ direction = "right" })'' { description = "Swap Window Right"; })
+          (mkBind ''mod .. " + SHIFT + UP"'' ''hl.dsp.window.swap({ direction = "up" })'' { description = "Swap Window Up"; })
+          (mkBind ''mod .. " + SHIFT + DOWN"'' ''hl.dsp.window.swap({ direction = "down" })'' { description = "Swap Window Down"; })
+
+          # Cycle windows
+          (mkBind ''"ALT + TAB"'' ''hl.dsp.window.cycle_next()'' { description = "Cycle Windows"; })
+          (mkBind ''"ALT + SHIFT + TAB"'' ''hl.dsp.window.cycle_next("prev")'' { description = "Cycle Windows Reverse"; })
+
+          # Resize
+          (mkBind ''mod .. " + code:20"'' ''hl.dsp.window.resize({ x = -100, y = 0, relative = true })'' { description = "Shrink Width"; })
+          (mkBind ''mod .. " + code:21"'' ''hl.dsp.window.resize({ x = 100, y = 0, relative = true })'' { description = "Grow Width"; })
+          (mkBind ''mod .. " + SHIFT + code:20"'' ''hl.dsp.window.resize({ x = 0, y = -100, relative = true })'' { description = "Shrink Height"; })
+          (mkBind ''mod .. " + SHIFT + code:21"'' ''hl.dsp.window.resize({ x = 0, y = 100, relative = true })'' { description = "Grow Height"; })
+
+          # ─────────────────────────────────────────────────────────────────
+          # Groups
+          # ─────────────────────────────────────────────────────────────────
+          (mkBind ''mod .. " + code:42"'' "hl.dsp.group.toggle()" { description = "Toggle Group"; })
+          (mkBind ''mod .. " + ALT + code:42"'' ''hl.dsp.group.move_window("out")'' { description = "Ungroup Window"; })
+          (mkBind ''mod .. " + ALT + LEFT"'' ''hl.dsp.group.move_window("l")'' { description = "Group with Left"; })
+          (mkBind ''mod .. " + ALT + RIGHT"'' ''hl.dsp.group.move_window("r")'' { description = "Group with Right"; })
+          (mkBind ''mod .. " + ALT + UP"'' ''hl.dsp.group.move_window("u")'' { description = "Group with Above"; })
+          (mkBind ''mod .. " + ALT + DOWN"'' ''hl.dsp.group.move_window("d")'' { description = "Group with Below"; })
+          (mkBind ''mod .. " + ALT + TAB"'' ''hl.dsp.group.next()'' { description = "Next in Group"; })
+          (mkBind ''mod .. " + ALT + SHIFT + TAB"'' ''hl.dsp.group.prev()'' { description = "Prev in Group"; })
+          (mkBind ''mod .. " + CTRL + LEFT"'' ''hl.dsp.group.prev()'' { description = "Prev in Group"; })
+          (mkBind ''mod .. " + CTRL + RIGHT"'' ''hl.dsp.group.next()'' { description = "Next in Group"; })
+          (mkBind ''mod .. " + ALT + code:10"'' ''hl.dsp.group.active({ index = 1 })'' { description = "Group Tab 1"; })
+          (mkBind ''mod .. " + ALT + code:11"'' ''hl.dsp.group.active({ index = 2 })'' { description = "Group Tab 2"; })
+          (mkBind ''mod .. " + ALT + code:12"'' ''hl.dsp.group.active({ index = 3 })'' { description = "Group Tab 3"; })
+          (mkBind ''mod .. " + ALT + code:13"'' ''hl.dsp.group.active({ index = 4 })'' { description = "Group Tab 4"; })
+          (mkBind ''mod .. " + ALT + code:14"'' ''hl.dsp.group.active({ index = 5 })'' { description = "Group Tab 5"; })
+
+          # ─────────────────────────────────────────────────────────────────
+          # Launchers & Menus
+          # ─────────────────────────────────────────────────────────────────
+          (mkExec ''mod .. " + SPACE"'' "omanix-launch-walker" "App Launcher")
+          (mkExec ''mod .. " + CTRL + E"'' "omanix-launch-walker -m symbols" "Symbol Picker")
+          (mkExec ''mod .. " + ALT + SPACE"'' "omanix-menu" "Main Menu")
+          (mkExec ''mod .. " + ESCAPE"'' "omanix-menu system" "System Menu")
+          (mkExec ''mod .. " + K"'' "omanix-menu-keybindings" "Show Keybindings")
+
+          # ─────────────────────────────────────────────────────────────────
+          # Aesthetics
+          # ─────────────────────────────────────────────────────────────────
+          (mkExec ''mod .. " + SHIFT + SPACE"'' "bash -c 'systemctl --user is-active --quiet waybar && systemctl --user stop waybar || systemctl --user start waybar'" "Toggle Waybar")
+          (mkExec ''mod .. " + CTRL + SPACE"'' "omanix-theme-bg-next" "Next Wallpaper")
+          (mkExec ''mod .. " + BACKSPACE"'' "omanix-smart-delete" "Smart Delete Line")
+          (mkExec ''mod .. " + CTRL + N"'' "hyprctl dispatch setprop active opaque toggle" "Toggle Opacity")
+          (mkExec ''mod .. " + SHIFT + BACKSPACE"'' "omanix-hyprland-workspace-toggle-gaps" "Toggle Gaps")
+
+          # ─────────────────────────────────────────────────────────────────
+          # Notifications
+          # ─────────────────────────────────────────────────────────────────
+          (mkExec ''mod .. " + COMMA"'' "makoctl dismiss" "Dismiss Notification")
+          (mkExec ''mod .. " + SHIFT + COMMA"'' "makoctl dismiss --all" "Dismiss All Notifs")
+          (mkExec ''mod .. " + CTRL + COMMA"'' "makoctl mode -t do-not-disturb && makoctl mode | grep -q 'do-not-disturb' && notify-send 'Silenced notifications' || notify-send 'Enabled notifications'" "Toggle Do Not Disturb")
+          (mkExec ''mod .. " + ALT + COMMA"'' "makoctl invoke" "Action on Notif")
+          (mkExec ''mod .. " + SHIFT + ALT + COMMA"'' "makoctl restore" "Restore Last Notif")
+
+          # ─────────────────────────────────────────────────────────────────
+          # System Toggles
+          # ─────────────────────────────────────────────────────────────────
+          (mkExec ''mod .. " + CTRL + I"'' "omanix-toggle-idle" "Toggle Idle Inhibit")
+
+          # ─────────────────────────────────────────────────────────────────
+          # Screenshots & Screen Recording
+          # ─────────────────────────────────────────────────────────────────
+          (mkExec ''"PRINT"'' "omanix-cmd-screenshot" "Screenshot")
+          (mkExec ''"SHIFT + PRINT"'' "omanix-cmd-screenshot smart clipboard" "Screenshot to Clipboard")
+          (mkExec ''"ALT + PRINT"'' "omanix-cmd-screenrecord" "Screen Record Toggle")
+          (mkExec ''mod .. " + PRINT"'' "pkill hyprpicker || hyprpicker -a" "Color Picker")
+
+          # ─────────────────────────────────────────────────────────────────
+          # File Sharing
+          # ─────────────────────────────────────────────────────────────────
+          (mkExec ''mod .. " + CTRL + S"'' "omanix-menu share" "Share Menu")
+
+          # ─────────────────────────────────────────────────────────────────
+          # Quick Info (No Waybar)
+          # ─────────────────────────────────────────────────────────────────
+          (mkExec ''mod .. " + CTRL + ALT + T"'' ''notify-send "    $(date +"%A %H:%M  —  %d %B W%V %Y")"'' "Show Time")
+          (mkExec ''mod .. " + CTRL + ALT + B"'' ''notify-send "󰁹    Battery is at $(omanix-battery-remaining)%"'' "Show Battery")
+
+          # ─────────────────────────────────────────────────────────────────
+          # Control Panels
+          # ─────────────────────────────────────────────────────────────────
+          (mkExec ''mod .. " + CTRL + A"'' "pavucontrol" "Audio Settings")
+          (mkExec ''mod .. " + CTRL + B"'' "omanix-launch-or-focus-tui bluetui" "Bluetooth Settings")
+          (mkExec ''mod .. " + CTRL + W"'' "omanix-launch-or-focus-tui wlctl" "WiFi Settings")
+          (mkExec ''mod .. " + CTRL + T"'' "omanix-launch-tui btop" "System Monitor")
+
+          # ─────────────────────────────────────────────────────────────────
+          # Lock & Power
+          # ─────────────────────────────────────────────────────────────────
+          (mkExec ''mod .. " + CTRL + L"'' "omanix-lock-screen" "Lock Screen")
+        ]
+        ++ (
+          if cfg.apps.spotify.enable then
+            [ (mkExec ''mod .. " + SHIFT + M"'' "omanix-launch-or-focus spotify spotify" "Open Music Player") ]
+          else
+            [ ]
+        )
+        ++ cfg.hyprland.extraBindings
 
         # ─────────────────────────────────────────────────────────────────
-        # Clipboard
+        # Mouse bindings
         # ─────────────────────────────────────────────────────────────────
-        "$mainMod, C, Copy, sendshortcut, CTRL, Insert,"
-        "$mainMod, V, Paste, sendshortcut, SHIFT, Insert,"
-        "$mainMod, X, Cut, sendshortcut, CTRL, X,"
-        "$mainMod CTRL, V, Clipboard History, exec, omanix-launch-walker -m clipboard"
+        ++ [
+          (mkBind ''mod .. " + mouse:272"'' "hl.dsp.window.drag()" { mouse = true; })
+          (mkBind ''mod .. " + mouse:273"'' "hl.dsp.window.resize()" { mouse = true; })
+        ]
+        ++ cfg.hyprland.extraMouseBindings
 
         # ─────────────────────────────────────────────────────────────────
-        # Window Management
+        # Media keys (repeat + locked)
         # ─────────────────────────────────────────────────────────────────
-        "$mainMod, W, Close Window, killactive"
-        "CTRL ALT, DELETE, Close All Windows, exec, omanix-hyprland-window-close-all"
-
-        "$mainMod, J, Toggle Split Direction, togglesplit"
-        "$mainMod, P, Toggle Pseudo-tile, pseudo"
-        "$mainMod, T, Toggle Floating, togglefloating"
-        "$mainMod, F, Fullscreen, fullscreen, 0"
-        "$mainMod CTRL, F, Fullscreen (Keep Bar), fullscreenstate, 0 2"
-        "$mainMod ALT, F, Maximize Window, fullscreen, 1"
-        "$mainMod, code:32, Pop Window Out, exec, omanix-hyprland-window-pop"
-
-        # Move focus
-        "$mainMod, LEFT, Focus Left, movefocus, l"
-        "$mainMod, RIGHT, Focus Right, movefocus, r"
-        "$mainMod, UP, Focus Up, movefocus, u"
-        "$mainMod, DOWN, Focus Down, movefocus, d"
+        ++ [
+          (mkExecRepeatLocked ''"XF86AudioRaiseVolume"'' "${osdClient} --output-volume raise" "Volume Up")
+          (mkExecRepeatLocked ''"XF86AudioLowerVolume"'' "${osdClient} --output-volume lower" "Volume Down")
+          (mkExecRepeatLocked ''"XF86AudioMute"'' "${osdClient} --output-volume mute-toggle" "Toggle Mute")
+          (mkExecRepeatLocked ''"XF86AudioMicMute"'' "${osdClient} --input-volume mute-toggle" "Toggle Mic Mute")
+          (mkExecRepeatLocked ''"XF86MonBrightnessUp"'' "${osdClient} --brightness raise" "Brightness Up")
+          (mkExecRepeatLocked ''"XF86MonBrightnessDown"'' "${osdClient} --brightness lower" "Brightness Down")
+          (mkExecRepeatLocked ''"ALT + XF86AudioRaiseVolume"'' "${osdClient} --output-volume +1" "Volume Up (Fine)")
+          (mkExecRepeatLocked ''"ALT + XF86AudioLowerVolume"'' "${osdClient} --output-volume -1" "Volume Down (Fine)")
+          (mkExecRepeatLocked ''"ALT + XF86MonBrightnessUp"'' "${osdClient} --brightness +1" "Brightness Up (Fine)")
+          (mkExecRepeatLocked ''"ALT + XF86MonBrightnessDown"'' "${osdClient} --brightness -1" "Brightness Down (Fine)")
+        ]
+        ++ cfg.hyprland.extraMediaBindings
 
         # ─────────────────────────────────────────────────────────────────
-        # Workspace Management (Monitor-Aware)
+        # Media keys (locked, no repeat)
         # ─────────────────────────────────────────────────────────────────
-        "$mainMod, code:10, Workspace 1, exec, omanix-workspace 1"
-        "$mainMod, code:11, Workspace 2, exec, omanix-workspace 2"
-        "$mainMod, code:12, Workspace 3, exec, omanix-workspace 3"
-        "$mainMod, code:13, Workspace 4, exec, omanix-workspace 4"
-        "$mainMod, code:14, Workspace 5, exec, omanix-workspace 5"
-
-        "$mainMod SHIFT, code:10, Move to Workspace 1, exec, omanix-workspace 1 move"
-        "$mainMod SHIFT, code:11, Move to Workspace 2, exec, omanix-workspace 2 move"
-        "$mainMod SHIFT, code:12, Move to Workspace 3, exec, omanix-workspace 3 move"
-        "$mainMod SHIFT, code:13, Move to Workspace 4, exec, omanix-workspace 4 move"
-        "$mainMod SHIFT, code:14, Move to Workspace 5, exec, omanix-workspace 5 move"
-
-        "$mainMod SHIFT ALT, code:10, Send to Workspace 1, exec, omanix-workspace 1 movesilent"
-        "$mainMod SHIFT ALT, code:11, Send to Workspace 2, exec, omanix-workspace 2 movesilent"
-        "$mainMod SHIFT ALT, code:12, Send to Workspace 3, exec, omanix-workspace 3 movesilent"
-        "$mainMod SHIFT ALT, code:13, Send to Workspace 4, exec, omanix-workspace 4 movesilent"
-        "$mainMod SHIFT ALT, code:14, Send to Workspace 5, exec, omanix-workspace 5 movesilent"
-
-        # ─────────────────────────────────────────────────────────────────
-        # Multi-Monitor Management
-        # ─────────────────────────────────────────────────────────────────
-        "$mainMod, bracketright, Focus Next Monitor, focusmonitor, +1"
-        "$mainMod, bracketleft, Focus Prev Monitor, focusmonitor, -1"
-        "$mainMod SHIFT, bracketright, Window to Next Monitor, movewindow, mon:+1"
-        "$mainMod SHIFT, bracketleft, Window to Prev Monitor, movewindow, mon:-1"
-
-        # ─────────────────────────────────────────────────────────────────
-        # Workspace Navigation
-        # ─────────────────────────────────────────────────────────────────
-        "$mainMod, TAB, Next Workspace, workspace, e+1"
-        "$mainMod SHIFT, TAB, Previous Workspace, workspace, e-1"
-        "$mainMod CTRL, TAB, Last Workspace, workspace, previous"
-
-        # Swap windows
-        "$mainMod SHIFT, LEFT, Swap Window Left, swapwindow, l"
-        "$mainMod SHIFT, RIGHT, Swap Window Right, swapwindow, r"
-        "$mainMod SHIFT, UP, Swap Window Up, swapwindow, u"
-        "$mainMod SHIFT, DOWN, Swap Window Down, swapwindow, d"
-
-        # Cycle windows
-        "ALT, TAB, Cycle Windows, cyclenext"
-        "ALT SHIFT, TAB, Cycle Windows Reverse, cyclenext, prev"
-
-        # Resize
-        "$mainMod, code:20, Shrink Width, resizeactive, -100 0"
-        "$mainMod, code:21, Grow Width, resizeactive, 100 0"
-        "$mainMod SHIFT, code:20, Shrink Height, resizeactive, 0 -100"
-        "$mainMod SHIFT, code:21, Grow Height, resizeactive, 0 100"
-
-        # ─────────────────────────────────────────────────────────────────
-        # Groups
-        # ─────────────────────────────────────────────────────────────────
-        "$mainMod, code:42, Toggle Group, togglegroup"
-        "$mainMod ALT, code:42, Ungroup Window, moveoutofgroup"
-        "$mainMod ALT, LEFT, Group with Left, moveintogroup, l"
-        "$mainMod ALT, RIGHT, Group with Right, moveintogroup, r"
-        "$mainMod ALT, UP, Group with Above, moveintogroup, u"
-        "$mainMod ALT, DOWN, Group with Below, moveintogroup, d"
-        "$mainMod ALT, TAB, Next in Group, changegroupactive, f"
-        "$mainMod ALT SHIFT, TAB, Prev in Group, changegroupactive, b"
-        "$mainMod CTRL, LEFT, Prev in Group, changegroupactive, b"
-        "$mainMod CTRL, RIGHT, Next in Group, changegroupactive, f"
-        "$mainMod ALT, code:10, Group Tab 1, changegroupactive, 1"
-        "$mainMod ALT, code:11, Group Tab 2, changegroupactive, 2"
-        "$mainMod ALT, code:12, Group Tab 3, changegroupactive, 3"
-        "$mainMod ALT, code:13, Group Tab 4, changegroupactive, 4"
-        "$mainMod ALT, code:14, Group Tab 5, changegroupactive, 5"
-
-        # ─────────────────────────────────────────────────────────────────
-        # Launchers & Menus
-        # ─────────────────────────────────────────────────────────────────
-        "$mainMod, SPACE, App Launcher, exec, omanix-launch-walker"
-        "$mainMod CTRL, E, Symbol Picker, exec, omanix-launch-walker -m symbols"
-        "$mainMod ALT, SPACE, Main Menu, exec, omanix-menu"
-        "$mainMod, ESCAPE, System Menu, exec, omanix-menu system"
-        "$mainMod, K, Show Keybindings, exec, omanix-menu-keybindings"
-
-        # ─────────────────────────────────────────────────────────────────
-        # Aesthetics
-        # ─────────────────────────────────────────────────────────────────
-        "$mainMod SHIFT, SPACE, Toggle Waybar, exec, bash -c 'systemctl --user is-active --quiet waybar && systemctl --user stop waybar || systemctl --user start waybar'"
-        "$mainMod CTRL, SPACE, Next Wallpaper, exec, omanix-theme-bg-next"
-        "$mainMod, BACKSPACE, Smart Delete Line, exec, omanix-smart-delete"
-        "$mainMod CTRL, N, Toggle Opacity, exec, hyprctl dispatch setprop active opaque toggle"
-        "$mainMod SHIFT, BACKSPACE, Toggle Gaps, exec, omanix-hyprland-workspace-toggle-gaps"
-
-        # ─────────────────────────────────────────────────────────────────
-        # Notifications
-        # ─────────────────────────────────────────────────────────────────
-        "$mainMod, COMMA, Dismiss Notification, exec, makoctl dismiss"
-        "$mainMod SHIFT, COMMA, Dismiss All Notifs, exec, makoctl dismiss --all"
-        "$mainMod CTRL, COMMA, Toggle Do Not Disturb, exec, makoctl mode -t do-not-disturb && makoctl mode | grep -q 'do-not-disturb' && notify-send 'Silenced notifications' || notify-send 'Enabled notifications'"
-        "$mainMod ALT, COMMA, Action on Notif, exec, makoctl invoke"
-        "$mainMod SHIFT ALT, COMMA, Restore Last Notif, exec, makoctl restore"
-
-        # ─────────────────────────────────────────────────────────────────
-        # System Toggles
-        # ─────────────────────────────────────────────────────────────────
-        "$mainMod CTRL, I, Toggle Idle Inhibit, exec, omanix-toggle-idle"
-
-        # ─────────────────────────────────────────────────────────────────
-        # Screenshots & Screen Recording
-        # ─────────────────────────────────────────────────────────────────
-        ", PRINT, Screenshot, exec, omanix-cmd-screenshot"
-        "SHIFT, PRINT, Screenshot to Clipboard, exec, omanix-cmd-screenshot smart clipboard"
-        "ALT, PRINT, Screen Record Toggle, exec, omanix-cmd-screenrecord"
-        "$mainMod, PRINT, Color Picker, exec, pkill hyprpicker || hyprpicker -a"
-
-        # ─────────────────────────────────────────────────────────────────
-        # File Sharing
-        # ─────────────────────────────────────────────────────────────────
-        "$mainMod CTRL, S, Share Menu, exec, omanix-menu share"
-
-        # ─────────────────────────────────────────────────────────────────
-        # Quick Info (No Waybar)
-        # ─────────────────────────────────────────────────────────────────
-        ''$mainMod CTRL ALT, T, Show Time, exec, notify-send "    $(date +"%A %H:%M  —  %d %B W%V %Y")"''
-        ''$mainMod CTRL ALT, B, Show Battery, exec, notify-send "󰁹    Battery is at $(omanix-battery-remaining)%"''
-
-        # ─────────────────────────────────────────────────────────────────
-        # Control Panels
-        # ─────────────────────────────────────────────────────────────────
-        "$mainMod CTRL, A, Audio Settings, exec, pavucontrol"
-        "$mainMod CTRL, B, Bluetooth Settings, exec, omanix-launch-or-focus-tui bluetui"
-        "$mainMod CTRL, W, WiFi Settings, exec, omanix-launch-or-focus-tui wlctl"
-        "$mainMod CTRL, T, System Monitor, exec, omanix-launch-tui btop"
-
-        # ─────────────────────────────────────────────────────────────────
-        # Lock & Power
-        # ─────────────────────────────────────────────────────────────────
-        "$mainMod CTRL, L, Lock Screen, exec, omanix-lock-screen"
-      ]
-
-      ++ (
-        if cfg.apps.spotify.enable then
-          [
-            "$mainMod SHIFT, M, Open Music Player, exec, omanix-launch-or-focus spotify spotify"
-          ]
-        else
-          [ ]
-      )
-
-      # User extra bindings
-      ++ cfg.hyprland.extraBindings;
-
-      # ═══════════════════════════════════════════════════════════════════
-      # Simple binds (no description)
-      # ═══════════════════════════════════════════════════════════════════
-      bind = cfg.hyprland.extraBinds;
-
-      # ═══════════════════════════════════════════════════════════════════
-      # Mouse bindings
-      # ═══════════════════════════════════════════════════════════════════
-      bindm = [
-        "$mainMod, mouse:272, movewindow"
-        "$mainMod, mouse:273, resizewindow"
-      ]
-      ++ cfg.hyprland.extraMouseBindings;
-
-      # ═══════════════════════════════════════════════════════════════════
-      # Media keys with repeat + descriptions (binddel)
-      # ═══════════════════════════════════════════════════════════════════
-      binddel = [
-        ", XF86AudioRaiseVolume, Volume Up, exec, ${osdClient} --output-volume raise"
-        ", XF86AudioLowerVolume, Volume Down, exec, ${osdClient} --output-volume lower"
-        ", XF86AudioMute, Toggle Mute, exec, ${osdClient} --output-volume mute-toggle"
-        ", XF86AudioMicMute, Toggle Mic Mute, exec, ${osdClient} --input-volume mute-toggle"
-        ", XF86MonBrightnessUp, Brightness Up, exec, ${osdClient} --brightness raise"
-        ", XF86MonBrightnessDown, Brightness Down, exec, ${osdClient} --brightness lower"
-        "ALT, XF86AudioRaiseVolume, Volume Up (Fine), exec, ${osdClient} --output-volume +1"
-        "ALT, XF86AudioLowerVolume, Volume Down (Fine), exec, ${osdClient} --output-volume -1"
-        "ALT, XF86MonBrightnessUp, Brightness Up (Fine), exec, ${osdClient} --brightness +1"
-        "ALT, XF86MonBrightnessDown, Brightness Down (Fine), exec, ${osdClient} --brightness -1"
-      ]
-      ++ cfg.hyprland.extraMediaBindings;
-
-      # ═══════════════════════════════════════════════════════════════════
-      # Media keys locked + descriptions (binddl)
-      # ═══════════════════════════════════════════════════════════════════
-      binddl = [
-        ", XF86AudioNext, Next Track, exec, ${osdClient} --playerctl next"
-        ", XF86AudioPause, Play/Pause, exec, ${osdClient} --playerctl play-pause"
-        ", XF86AudioPlay, Play/Pause, exec, ${osdClient} --playerctl play-pause"
-        ", XF86AudioPrev, Previous Track, exec, ${osdClient} --playerctl previous"
-        "$mainMod, XF86AudioMute, Switch Audio Output, exec, omanix-cmd-audio-switch"
-        ", XF86PowerOff, Power Menu, exec, omanix-menu system"
-      ]
-      ++ cfg.hyprland.extraLockedBindings;
+        ++ [
+          (mkExecLocked ''"XF86AudioNext"'' "${osdClient} --playerctl next" "Next Track")
+          (mkExecLocked ''"XF86AudioPause"'' "${osdClient} --playerctl play-pause" "Play/Pause")
+          (mkExecLocked ''"XF86AudioPlay"'' "${osdClient} --playerctl play-pause" "Play/Pause")
+          (mkExecLocked ''"XF86AudioPrev"'' "${osdClient} --playerctl previous" "Previous Track")
+          (mkExecLocked ''mod .. " + XF86AudioMute"'' "omanix-cmd-audio-switch" "Switch Audio Output")
+          (mkExecLocked ''"XF86PowerOff"'' "omanix-menu system" "Power Menu")
+        ]
+        ++ cfg.hyprland.extraLockedBindings
+        ++ cfg.hyprland.extraBinds;
     };
   };
 }

@@ -214,7 +214,13 @@ in
     };
 
     omanix.hyprland.extraBindings = lib.mkIf cfg.hyprlandBinding [
-      "$mainMod ALT, RETURN, Tmux, exec, ghostty --working-directory=\"$(omanix-cmd-terminal-cwd)\" -e bash -c 'tmux attach || tmux new -s Work'"
+      {
+        _args = [
+          (lib.generators.mkLuaInline ''mod .. " + ALT + RETURN"'')
+          (lib.generators.mkLuaInline ''hl.dsp.exec_cmd([[ghostty --working-directory="$(omanix-cmd-terminal-cwd)" -e bash -c 'tmux attach || tmux new -s Work']])'')
+          { description = "Tmux"; }
+        ];
+      }
     ];
   };
 }

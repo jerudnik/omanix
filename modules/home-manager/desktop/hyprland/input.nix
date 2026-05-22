@@ -1,18 +1,21 @@
-_: {
+{ lib, ... }: {
   wayland.windowManager.hyprland.settings = {
-    input = {
-      kb_layout = "us";
-      follow_mouse = 1;
-      numlock_by_default = true;
-
-      # touchpad = {
-      #   natural_scroll = false;
-      #   scroll_factor = 0.4;
-      # };
+    config = {
+      input = {
+        kb_layout = "us";
+        follow_mouse = 1;
+        numlock_by_default = true;
+      };
     };
 
-    gesture = [
-      "3, horizontal, workspace"
-    ];
+    gesture = {
+      _args = [
+        (lib.generators.mkLuaInline ''{
+          fingers = 3,
+          direction = "horizontal",
+          action = "workspace",
+        }'')
+      ];
+    };
   };
 }
