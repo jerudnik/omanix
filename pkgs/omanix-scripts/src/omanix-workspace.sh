@@ -24,12 +24,12 @@ TARGET_WORKSPACE=$((BASE + WORKSPACE_NUM))
 
 case "$ACTION" in
   switch)
-    hyprctl dispatch workspace "$TARGET_WORKSPACE"
+    hyprctl dispatch "hl.dsp.focus({workspace = \"$TARGET_WORKSPACE\"})"
     ;;
   move)
-    hyprctl dispatch movetoworkspace "$TARGET_WORKSPACE"
+    hyprctl dispatch "hl.dsp.window.move({workspace = \"$TARGET_WORKSPACE\"})"
     ;;
   movesilent)
-    hyprctl dispatch movetoworkspacesilent "$TARGET_WORKSPACE"
+    hyprctl dispatch "hl.dsp.window.move({workspace = \"$TARGET_WORKSPACE\", silent = true})"
     ;;
 esac

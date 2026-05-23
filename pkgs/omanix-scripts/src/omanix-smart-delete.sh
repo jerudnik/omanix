@@ -12,10 +12,8 @@ TARGET="address:$ADDRESS"
 
 # 2. Check if it's a terminal
 if [[ "$CLASS" =~ "ghostty" || "$CLASS" =~ "kitty" || "$CLASS" =~ "Alacritty" || "$CLASS" =~ "neovide" ]]; then
-  # Terminal: Send Ctrl + U (Standard Unix "Kill Line Backward")
-  hyprctl dispatch sendshortcut "CTRL, U, $TARGET"
+  hyprctl dispatch "hl.dsp.send_shortcut({mods = \"CTRL\", key = \"U\", window = \"$TARGET\"})"
 else
-  # Browsers/GUIs: Send Shift + Home (Select to start) then Backspace (Delete selection)
-  hyprctl dispatch sendshortcut "SHIFT, Home, $TARGET"
-  hyprctl dispatch sendshortcut ", Backspace, $TARGET"
+  hyprctl dispatch "hl.dsp.send_shortcut({mods = \"SHIFT\", key = \"Home\", window = \"$TARGET\"})"
+  hyprctl dispatch "hl.dsp.send_shortcut({key = \"Backspace\", window = \"$TARGET\"})"
 fi

@@ -207,7 +207,7 @@ in
           (mkExec ''mod .. " + SHIFT + SPACE"'' "bash -c 'systemctl --user is-active --quiet waybar && systemctl --user stop waybar || systemctl --user start waybar'" "Toggle Waybar")
           (mkExec ''mod .. " + CTRL + SPACE"'' "omanix-theme-bg-next" "Next Wallpaper")
           (mkExec ''mod .. " + BACKSPACE"'' "omanix-smart-delete" "Smart Delete Line")
-          (mkExec ''mod .. " + CTRL + N"'' "hyprctl dispatch setprop active opaque toggle" "Toggle Opacity")
+          (mkBind ''mod .. " + CTRL + N"'' ''hl.dsp.window.set_prop({prop = "opaque", value = "toggle"})'' { description = "Toggle Opacity"; })
           (mkExec ''mod .. " + SHIFT + BACKSPACE"'' "omanix-hyprland-workspace-toggle-gaps" "Toggle Gaps")
 
           # ─────────────────────────────────────────────────────────────────

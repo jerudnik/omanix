@@ -87,7 +87,7 @@ pkill wayfreeze
 [ -z "$SELECTION" ] && exit 0
 
 # Ensure we are focusing the monitor under the cursor so Satty opens there
-hyprctl dispatch focusmonitor +0 >/dev/null 2>&1
+hyprctl dispatch 'hl.dsp.focus({monitor = "+0"})' >/dev/null 2>&1
 
 # Processing Logic
 if [[ "$DEST" == "file" ]]; then
