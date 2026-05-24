@@ -13,7 +13,10 @@
 
     nix-colors.url = "github:misterio77/nix-colors";
 
-    lazyvim.url = "github:pfassina/lazyvim-nix/v15.14.0";
+    lazyvim = {
+      url = "github:pfassina/lazyvim-nix/v15.14.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     elephant.url = "github:abenz1267/elephant";
 
