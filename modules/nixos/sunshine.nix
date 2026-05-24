@@ -1,10 +1,20 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 let
   cfg = config.omanix;
+
+  toggleScript = pkgs.writeShellApplication {
+    name = "omanix-toggle-sunshine";
+    runtimeInputs = with pkgs; [
+      systemd
+      libnotify
+    ];
+    text = builtins.readFile ./omanix-toggle-sunshine.sh;
+  };
 
   tcpPorts = [ 47984 47989 47990 48010 ];
   udpPorts = [ 47998 47999 48000 48002 48010 ];
@@ -39,10 +49,12 @@ let
 in
 {
   config = lib.mkIf (cfg.enable && cfg.sunshine.enable) {
+    environment.systemPackages = [ toggleScript ];
+
     services.sunshine = {
       enable = true;
       capSysAdmin = true;
-      autoStart = true;
+      autoStart = false;
     };
 
     networking.firewall.extraCommands = lib.mkIf (cfg.sunshine.allowedIps != [ ]) firewallRules;
