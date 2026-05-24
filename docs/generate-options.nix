@@ -7,7 +7,6 @@
   omanixLib,
 }:
 let
-  # Evaluate NixOS module (full nixosSystem gives us all infrastructure)
   nixosEval = lib.nixosSystem {
     system = "x86_64-linux";
     modules = [
@@ -16,7 +15,6 @@ let
     ];
   };
 
-  # Evaluate Home Manager module
   hmEval = home-manager.lib.homeManagerConfiguration {
     inherit pkgs;
     modules = [
@@ -51,25 +49,18 @@ let
     transformOptions = filterOmanix;
     warningsAreErrors = false;
   };
+
+  splitScript = pkgs.writeShellScript "split-options" ''
+    set -euo pipefail
+    NIXOS_JSON="$1"
+    HM_JSON="$2"
+    OUT="$3"
+
+    mkdir -p "$OUT"
+
+    ${pkgs.python3}/bin/python3 ${./split-options.py} "$NIXOS_JSON" "$HM_JSON" "$OUT"
+  '';
 in
 pkgs.runCommand "omanix-options-docs" { } ''
-  mkdir -p $out
-  cat > $out/options.md << 'HEADER'
-  # Omanix Options Reference
-
-  ## NixOS Module Options
-
-  These options are available under `omanix.*` in your NixOS configuration.
-
-  HEADER
-  cat ${nixosDocs.optionsCommonMark} >> $out/options.md
-
-  cat >> $out/options.md << 'SEPARATOR'
-
-  ## Home Manager Module Options
-
-  These options are available under `omanix.*` in your Home Manager configuration.
-
-  SEPARATOR
-  cat ${hmDocs.optionsCommonMark} >> $out/options.md
+  ${splitScript} ${nixosDocs.optionsJSON}/share/doc/nixos/options.json ${hmDocs.optionsJSON}/share/doc/nixos/options.json $out
 ''

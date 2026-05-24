@@ -35,13 +35,7 @@ jobs:
       - name: Assemble book
         run: |
           mkdir -p book/src
-          cp result/options.md book/src/options.md
-          cat > book/src/SUMMARY.md << 'EOF'
-          # Summary
-
-          - [Introduction](index.md)
-          - [Options Reference](options.md)
-          EOF
+          cp result/*.md book/src/
           cat > book/src/index.md << 'EOF'
           # Omanix
 
@@ -49,10 +43,18 @@ jobs:
 
           Omanix is a NixOS port of [Omarchy](https://github.com/basecamp/omarchy) — a curated, keyboard-driven desktop. Unlike the original (which targets Arch Linux), Omanix is fully declarative. There is no runtime theme switching or TUI package installer; everything is configured at build time.
 
-          ## Quick links
+          ## Sections
 
-          - [Options Reference](options.md) — all `omanix.*` configuration options
-          - [Source code](https://github.com/T00fy/omanix)
+          - **[NixOS Options](nixos.md)** — system-level configuration
+          - **[Apps](apps.md)** — optional application modules
+          - **[Hyprland](hyprland.md)** — window manager visuals, bindings, rules
+          - **[Idle & Power](idle.md)** — screensaver, lock, suspend
+          - **[Monitors](monitors.md)** — multi-monitor setup
+          - **[Languages](languages.md)** — development toolchains
+          - **[Terminal](terminal.md)** — terminal emulator config
+          - **[Browser](browser.md)** — browser integration
+          - **[Theme & UI](theme.md)** — theme, wallpaper, Waybar, Walker
+          - **[User](user.md)** — git identity
           EOF
           cat > book/book.toml << 'EOF'
           [book]
