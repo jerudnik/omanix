@@ -11,7 +11,7 @@ case "$MODE" in
       rm -f "$TMP"
       exit 1
     fi
-    systemd-run --user --quiet --collect localsend_app --headless send "$TMP"
+    systemd-run --user --quiet --collect bash -c "localsend_app --headless send \"$TMP\"; rm -f \"$TMP\""
     ;;
   file)
     FILES=$(find "$HOME" -type f 2>/dev/null | fzf --multi)

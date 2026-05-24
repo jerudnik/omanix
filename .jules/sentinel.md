@@ -1,0 +1,4 @@
+## 2024-06-03 - [Secure Temp File Cleanup]
+**Vulnerability:** A temporary file containing clipboard contents was created in `/tmp` using `mktemp` and used via `systemd-run`. Since `systemd-run` runs in the background, the script finished immediately, but the temporary file was never cleaned up. This leaves potentially sensitive user data (passwords, tokens) in the clipboard indefinitely in `/tmp`.
+**Learning:** Background jobs that depend on temporary files must ensure the files are cleaned up after the job completes, rather than assuming the calling script can do it synchronously.
+**Prevention:** Instead of running the background process directly, wrap it in a shell command (e.g., `bash -c`) that executes the main command and then explicitly deletes the temporary file (e.g., `localsend_app ...; rm -f "$TMP"`).
