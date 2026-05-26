@@ -171,9 +171,12 @@ in
           for dir in "$base_dir"/*/; do
             [[ -d $dir ]] || continue
             local dirpath="''${dir%/}"
+            # SEC: Prevent command injection from malicious directory names by escaping paths
+            local escaped_dirpath
+            escaped_dirpath=$(printf '%q' "$dirpath")
 
             if $first; then
-              tmux send-keys -t "$TMUX_PANE" "cd '$dirpath' && tdl $ai $ai2" C-m
+              tmux send-keys -t "$TMUX_PANE" "cd $escaped_dirpath && tdl $ai $ai2" C-m
               first=false
             else
               local pane_id=$(tmux new-window -c "$dirpath" -P -F '#{pane_id}')
@@ -191,6 +194,9 @@ in
           local count="$1"
           local cmd="$2"
           local current_dir="''${PWD}"
+          # SEC: Prevent command injection from malicious directory names
+          local escaped_current_dir
+          escaped_current_dir=$(printf '%q' "$current_dir")
           local -a panes
 
           tmux rename-window -t "$TMUX_PANE" "$(basename "$current_dir")"
@@ -205,7 +211,7 @@ in
           done
 
           for pane in "''${panes[@]}"; do
-            tmux send-keys -t "$pane" "$cmd" C-m
+            tmux send-keys -t "$pane" "cd $escaped_current_dir && $cmd" C-m
           done
 
           tmux select-pane -t "''${panes[0]}"
