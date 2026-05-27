@@ -4,14 +4,15 @@ MODE="${1:-clipboard}"
 
 case "$MODE" in
   clipboard)
-    TMP=$(mktemp /tmp/omanix-share-XXXXXX.txt)
+    TMP=$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/omanix-share-XXXXXX.txt")
+    trap 'rm -f "$TMP"' EXIT
     wl-paste > "$TMP"
     if [[ ! -s "$TMP" ]]; then
       notify-send "Share" "Clipboard is empty" -t 2000
-      rm -f "$TMP"
       exit 1
     fi
-    systemd-run --user --quiet --collect localsend_app --headless send "$TMP"
+    # Wait for the systemd-run process to complete so that trap can cleanup the temp file safely
+    systemd-run --user --quiet --collect --wait localsend_app --headless send "$TMP"
     ;;
   file)
     FILES=$(find "$HOME" -type f 2>/dev/null | fzf --multi)
