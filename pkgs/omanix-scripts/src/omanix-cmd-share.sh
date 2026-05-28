@@ -4,7 +4,7 @@ MODE="${1:-clipboard}"
 
 case "$MODE" in
   clipboard)
-    TMP=$(mktemp /tmp/omanix-share-XXXXXX.txt)
+    TMP=$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/omanix-share-XXXXXX.txt")
     wl-paste > "$TMP"
     if [[ ! -s "$TMP" ]]; then
       notify-send "Share" "Clipboard is empty" -t 2000
