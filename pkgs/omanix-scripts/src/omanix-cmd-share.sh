@@ -4,7 +4,8 @@ MODE="${1:-clipboard}"
 
 case "$MODE" in
   clipboard)
-    TMP=$(mktemp /tmp/omanix-share-XXXXXX.txt)
+    # Security: Use tmpfs (XDG_RUNTIME_DIR) to prevent sensitive clipboard data from hitting disk
+    TMP=$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/omanix-share-XXXXXX.txt")
     wl-paste > "$TMP"
     if [[ ! -s "$TMP" ]]; then
       notify-send "Share" "Clipboard is empty" -t 2000
