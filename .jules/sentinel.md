@@ -1,0 +1,4 @@
+## 2024-06-02 - Asynchronous Temporary File Leakage
+**Vulnerability:** A script (`omanix-cmd-share.sh`) saved sensitive clipboard contents to a temporary file, passed that file to an asynchronous background task (`systemd-run`), and exited without cleaning up. This left the sensitive contents on disk permanently.
+**Learning:** When passing temporary files to asynchronous commands, simple file deletion at the end of the script (or even using `trap EXIT`) is insufficient because the background process might still be running (or might not have started). Furthermore, defaulting to `/tmp` writes to disk on some systems.
+**Prevention:** 1) Write temporary files that hold sensitive data to `${XDG_RUNTIME_DIR:-/tmp}` to ensure they reside in an in-memory tmpfs. 2) Wrap the asynchronous task execution in a shell (e.g. `sh -c 'cmd "$1"; rm -f "$1"' _ "$FILE"`) to ensure the file is only deleted after the asynchronous task finishes consuming it.
