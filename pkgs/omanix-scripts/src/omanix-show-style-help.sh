@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-HELP_FILE=$(mktemp /tmp/omanix-help-XXXXXX.md)
+# Security: Use XDG_RUNTIME_DIR (tmpfs) for temporary files instead of /tmp
+HELP_FILE=$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/omanix-help-XXXXXX.md")
 sed "s/{{THEME_LIST}}/$OMANIX_THEME_LIST/" "$OMANIX_DOC_STYLE" > "$HELP_FILE"
 
 if command -v glow &> /dev/null; then

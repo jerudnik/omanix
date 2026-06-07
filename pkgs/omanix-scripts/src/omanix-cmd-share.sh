@@ -4,14 +4,16 @@ MODE="${1:-clipboard}"
 
 case "$MODE" in
   clipboard)
-    TMP=$(mktemp /tmp/omanix-share-XXXXXX.txt)
+    # Security: Use XDG_RUNTIME_DIR (tmpfs) and ensure deletion after sending
+    TMP=$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/omanix-share-XXXXXX.txt")
     wl-paste > "$TMP"
     if [[ ! -s "$TMP" ]]; then
       notify-send "Share" "Clipboard is empty" -t 2000
       rm -f "$TMP"
       exit 1
     fi
-    systemd-run --user --quiet --collect localsend_app --headless send "$TMP"
+    # localsend_app runs asynchronously in the systemd unit; wrap to clean up
+    systemd-run --user --quiet --collect sh -c 'localsend_app --headless send "$1"; rm -f "$1"' _ "$TMP"
     ;;
   file)
     FILES=$(find "$HOME" -type f 2>/dev/null | fzf --multi)
