@@ -1,0 +1,4 @@
+## 2024-06-08 - Insecure Temporary File Retention in Asynchronous Jobs
+**Vulnerability:** Clipboard data was being written to a temporary file (`/tmp/omanix-share-XXXXXX.txt`) to be passed to an asynchronous `systemd-run` job, but the file was never cleaned up. This permanently leaves potentially sensitive clipboard contents on disk.
+**Learning:** Standard cleanup traps (`trap 'rm -f $TMP' EXIT`) or sequential execution don't work when the consuming job runs asynchronously via `systemd-run` (or similar mechanisms) without waiting, because the main script exits immediately.
+**Prevention:** Use in-memory file systems (`${XDG_RUNTIME_DIR:-/tmp}`) instead of `/tmp` for temporary files, and wrap the asynchronous command in a shell execution that performs cleanup (e.g., `sh -c 'command "$1"; rm -f "$1"' _ "$FILE"`) to ensure the file is removed after it is consumed.
