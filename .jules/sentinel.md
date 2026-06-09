@@ -1,0 +1,4 @@
+## 2024-06-09 - Insecure Temporary File Creation for Sensitive Clipboard Data
+**Vulnerability:** `omanix-cmd-share.sh` created a temporary file in `/tmp` containing clipboard contents (`wl-paste`), and the file was not reliably deleted because `systemd-run` launches the process asynchronously and no cleanup mechanism was provided.
+**Learning:** Writing sensitive clipboard data to a persistent `/tmp` directory exposes it to other processes or physical access if not mounted as tmpfs. Furthermore, failing to clean up files after asynchronous background tasks (`systemd-run`) leads to permanent data leaks.
+**Prevention:** Use `${XDG_RUNTIME_DIR:-/tmp}` to ensure temporary files are written to a secure, user-specific in-memory tmpfs. When passing temporary files to asynchronous processes (e.g., via `systemd-run`), wrap the command in a shell block that deletes the file after execution completes (e.g., `sh -c 'cmd "$1"; rm -f "$1"' _ "$TMP"`).
