@@ -1,0 +1,4 @@
+## 2024-06-11 - Information Disclosure in Clipboard Sharing
+**Vulnerability:** Clipboard contents were stored in persistent undeleted files in `/tmp` because the `omanix-cmd-share.sh` script used `systemd-run` without waiting and exited, leaving the temporary file behind.
+**Learning:** Backgrounding commands or using `systemd-run` asychronously means the caller shell exits before the command finishes, bypassing any cleanup traps or `rm` commands in the parent script if not properly scheduled.
+**Prevention:** Always use `XDG_RUNTIME_DIR` (which is typically a `tmpfs` partition) instead of `/tmp` for temporary files containing sensitive data like clipboard contents. When passing temporary files to asynchronous commands, wrap the execution in `sh -c 'command "$1"; rm -f "$1"' _ "$FILE"` to ensure proper deletion after the command finishes.
