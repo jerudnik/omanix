@@ -30,7 +30,8 @@ export WP_INDEX
 
 HELP_TEXT=$(envsubst < "$OMANIX_DOC_STYLE_PREVIEW")
 
-TMP_HELP=$(mktemp)
+# SECURITY: Use XDG_RUNTIME_DIR for tmpfs to avoid disk writes
+TMP_HELP=$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/omanix-help-XXXXXX.md")
 echo "$HELP_TEXT" > "$TMP_HELP"
 
 ghostty --class="org.omanix.terminal" -e sh -c "glow -p '$TMP_HELP'; rm '$TMP_HELP'"
