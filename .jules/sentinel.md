@@ -1,0 +1,4 @@
+## 2024-06-14 - Fix Sensitive Data Leak in Clipboard Sharing
+**Vulnerability:** The script `omanix-cmd-share.sh` wrote sensitive clipboard contents to `/tmp` and passed it to an asynchronous process without deleting the file.
+**Learning:** Temporary files used with asynchronous processes (like `systemd-run`) cannot be cleaned up securely using simple synchronous commands or basic `trap` handlers, leaving sensitive data (like copied passwords or API keys) lingering on disk indefinitely.
+**Prevention:** Always use `${XDG_RUNTIME_DIR:-/tmp}` for temporary files to ensure they are on an in-memory `tmpfs` restricted to the user. For asynchronous operations, wrap the command in `sh -c` passing the filename as an argument to securely process and immediately delete it: `sh -c 'command "$1"; rm -f "$1"' _ "$TMP"`.
