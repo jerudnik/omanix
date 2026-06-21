@@ -2,12 +2,12 @@
 
 # Usage check
 if (($# == 0)); then
-  echo "Usage: omanix-launch-or-focus [window-pattern] [launch-command]"
+  echo "Usage: omanix-launch-or-focus [window-pattern] [launch-command...]"
   exit 1
 fi
 
 WINDOW_PATTERN="$1"
-LAUNCH_COMMAND="${2:-"$WINDOW_PATTERN"}"
+shift
 
 # 1. Query Hyprland for windows matching the class or title (case-insensitive)
 WINDOW_ADDRESS=$(hyprctl clients -j | jq -r --arg p "$WINDOW_PATTERN" \
@@ -17,5 +17,9 @@ WINDOW_ADDRESS=$(hyprctl clients -j | jq -r --arg p "$WINDOW_PATTERN" \
 if [[ -n "$WINDOW_ADDRESS" && "$WINDOW_ADDRESS" != "null" ]]; then
   hyprctl dispatch focuswindow "address:$WINDOW_ADDRESS"
 else
-  eval exec setsid "$LAUNCH_COMMAND"
+  if (($# == 0)); then
+    exec setsid "$WINDOW_PATTERN"
+  else
+    exec setsid "$@"
+  fi
 fi
