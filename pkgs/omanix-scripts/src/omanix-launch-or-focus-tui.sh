@@ -13,6 +13,6 @@ CMD_NAME=$(basename "$1")
 APP_ID="org.omanix.$CMD_NAME"
 
 # 2. Compose logic
-# We call our other scripts. We pass all arguments ($*) to the launch command
+# We call our other scripts. We pass all arguments ("$@") to the launch command
 # so that flags (like -e or --flags) are preserved if a new window is launched.
-exec omanix-launch-or-focus "$APP_ID" "omanix-launch-tui $*"
+exec omanix-launch-or-focus "$APP_ID" omanix-launch-tui "$@"
