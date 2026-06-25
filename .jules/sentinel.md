@@ -1,0 +1,4 @@
+## 2024-05-30 - Clipboard Data Leak via Temporary Files
+**Vulnerability:** Clipboard contents were written to `/tmp` for asynchronous transmission via `systemd-run` but were never deleted, leaving sensitive data (passwords, keys) exposed on disk indefinitely.
+**Learning:** When passing temporary files to asynchronous processes (like `systemd-run` without `--wait`), the calling script exits before the child finishes, making standard cleanup (like `rm` at the end of the script) impossible.
+**Prevention:** Always use `${XDG_RUNTIME_DIR:-/tmp}` for temporary files containing sensitive data to prefer tmpfs (in-memory) storage. Wrap asynchronous commands in a shell execution block (e.g., `sh -c 'command "$1"; rm -f "$1"' _ "$FILE"`) to ensure the file is deleted immediately after the background process completes its use of the file.
